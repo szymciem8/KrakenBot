@@ -5,6 +5,10 @@ import hmac
 import base64
 import time
 from requests.models import parse_header_links
+import logging
+
+format  = '%(asctime)s-%(process)d-%(levelname)s-%(message)s'
+logging.basicConfig(filename='logs/kraken_bot_log.log', filemode='a', format=format, level=logging.INFO)
 
 class KrakenBot:
 
@@ -12,9 +16,9 @@ class KrakenBot:
         self.api_url=api_url
         self.api_key=api_key
         self.api_sec=api_sec
+        self.contrib_per_period=40
 
     def dollar_cost_average(self):
-        
         pass
 
     def get_balance(self, token=None):
@@ -28,11 +32,11 @@ class KrakenBot:
             try:
                 return float(resp.json()['result'][token])
             except:
-                print("This token does not exists!")
+                logging.warning("This token does not exists!")
 
     def buy_pair(self, pair, ordertype, volume, price=None):
         if volume < self.order_min(pair):
-            print("Volume is too low!")
+            logging.warning("Volume is too low!")
             return 1
         else:
             if ordertype=='market':
@@ -50,7 +54,7 @@ class KrakenBot:
     def sell_pair(self, pair, ordertype, volume):
 
         if volume < self.order_min(pair):
-            print("Volume is too low!")
+            logging.warning("Volume is too low!")
             return 1
         else:
             if ordertype=='market':
@@ -69,6 +73,11 @@ class KrakenBot:
         resp = requests.get(self.api_url+'/0/public/AssetPairs?pair='+pair)
 
         return float(resp.json()['result'][pair]['ordermin'])
+
+    def dec_places(self, pair):
+        resp = requests.get(self.api_url+'/0/public/AssetPairs?pair='+pair)
+
+        return int(resp.json()['result'][pair]['lot_decimals'])
 
     def get_price(self, pair, type='ask'):
 
@@ -121,6 +130,29 @@ class KrakenBot:
                 return resp[i]
 
         return 1
+
+    def check_contrib_values(self, pairs, mode='min_order'):
+        contributions = {}
+        for pair, percentage in pairs.items():
+            contrib = (percentage * self.contrib_per_period)/100
+
+            minimum_order = self.order_min(pair)
+            price=self.get_price(pair)
+            logging.info(f'Minimum order volume: {pair}: {minimum_order}')
+
+            if contrib/price < minimum_order:
+                # This is fine for min_oder mode
+                contributions[pair] = round(minimum_order, self.dec_places(pair))
+
+                #TODO
+                # Proportion mode should be run recursively
+                # e.g
+                # update contrib_per_period accordingly
+                # return self.check_contrib_values(pairs)
+            else:
+                contributions[pair] = round(contrib/price, self.dec_places(pair))
+
+        return contributions
 
 
     def get_kraken_signature(self, urlpath, data, secret):

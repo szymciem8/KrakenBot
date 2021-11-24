@@ -11,7 +11,6 @@ import logging
 # Logging
 format  = '%(asctime)s-%(process)d-%(levelname)s-%(message)s'
 logging.basicConfig(filename='logs/kraken_bot_log.log', filemode='a', format=format, level=logging.INFO)
-logging.info('test')
 
 # DIFFERENT APPROACH
 # create two variables: frequency of buys, price per buy
@@ -31,10 +30,9 @@ api_url = "https://api.kraken.com"
 api_key = os.environ['KRAKEN_KEY']
 api_sec = os.environ['KRAKEN_SEC']
 
-pairs = ['ADAUSD', 'XETHZUSD', 'DOTUSD']
-
 kraken_bot = KrakenBot(api_url, api_key, api_sec)
 
+# Time constants
 MINUTE=60
 HOUR=MINUTE*60
 DAY=HOUR*24
@@ -44,6 +42,9 @@ FREQUENCY_H=FREQUENCY_D*24  #HOURS
 FREQUENCY_M=FREQUENCY_H*60  #MINUTES
 FREQUENCY_S=FREQUENCY_H*60  #SECONDS
 CONTRIBUTION=40             #DOLLARS
+
+# Base currency
+BASE_CURRENCY='ZUSD'
 
 # If some asset's minimum order price happen to be higher than minimum 
 # order price, algorithm will act accordingly to the MODE
@@ -60,7 +61,8 @@ MODE='min_order'
 period_contribution = 40
 
 # Proprtions are in %
-pairs = {'ADAUSD':33, 'XETHZUSD':34, 'DOTUSD':33}
+pairs = {'XETHZUSD':36, 'ADAUSD':22,  'DOTUSD':22, 'ALGOUSD':10, 'KSMUSD':10}
+staked_assets = ['ADA', 'DOT', 'KSM', 'ALGO']
 
 check_sum = 0
 for key, val in pairs.items(): check_sum += val
@@ -69,28 +71,7 @@ if check_sum != 100:
     logging.info('Assets proportions are not correct!')
     sys.exit(0)
 
-
-contributions = {}
-
-for key, val in pairs.items():
-    contrib = (val * period_contribution)/100
-
-    minimum_order = kraken_bot.order_min(key) * kraken_bot.get_price(key)
-    # logging.info(minimum_order)
-    if contrib < minimum_order:
-        contrib = minimum_order
-
-    contributions[key] = contrib
-
-# logging.info(contributions)
-
-staked_assets = ['ADA', 'DOT']
-
-today = datetime(2021, 12, 30, 15, 11, 11, 0)
-future = datetime(2021, 12, 30, 15, 50, 13, 345)
-delta = future - today
-
-logging.info('Bot has started...')
+contributions = kraken_bot.check_contrib_values(pairs)
 
 try:
     with open(r'start.pickle', 'rb') as start_file:
@@ -103,6 +84,7 @@ except:
     with open(r'start.pickle', 'wb') as start_file:
         pickle.dump(start, start_file)
 
+logging.info('Bot has started...')
 # MAIN LOOP
 while True:
 
@@ -115,15 +97,17 @@ while True:
     logging.info(now)
     logging.info('--------------------------------')
     # Make contribution
-    logging.info('Buying assets: ')
-    for pair, value in pairs.items():
+    logging.info('Buying assets')
+    for pair, value in contributions.items():
         if kraken_bot.get_balance('ZUSD') < value:
             logging.warning(f'Low balance! Bying {pair} "failed.')
         else:
             # kraken_bot.buy_pair(pair, 'market', contributions[pair])
-            logging.info(f'Bought pair: {pair}, {value}$')
+            logging.info(f'Bought pair: {pair}, \t{value}\t->\t{round(value*kraken_bot.get_price(pair),2)}')
 
     # Stake available assets
+
+    logging.info('Staking assets')
     for asset in staked_assets:
         available_amount = kraken_bot.get_balance(asset)
 
