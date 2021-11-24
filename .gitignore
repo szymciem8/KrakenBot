@@ -6,6 +6,11 @@ __pycache__/
 # C extensions
 *.so
 
+#Shell
+*.sh
+
+*.pickle
+
 # Distribution / packaging
 .Python
 build/
