@@ -6,22 +6,28 @@ import base64
 import time
 from requests.models import parse_header_links
 import logging
+import os
 
 format  = '%(asctime)s-%(process)d-%(levelname)s-%(message)s'
-logging.basicConfig(filename='logs/kraken_bot_log.log', filemode='a', format=format, level=logging.INFO)
+path = os.path.join(os.path.dirname(__file__), 'logs/kraken_bot_log.log')
+logging.basicConfig(filename=path, filemode='a', format=format, level=logging.INFO)
 
 class KrakenBot:
 
     def __init__(self, api_url, api_key, api_sec):
+        self.BASE_CURRENCY='ZUSD'
+
         self.api_url=api_url
         self.api_key=api_key
         self.api_sec=api_sec
-        self.contrib_per_period=40
 
     def dollar_cost_average(self):
         pass
 
     def get_balance(self, token=None):
+        '''
+        Returns balance of all assets or the one specified.
+        '''
         resp = self.kraken_request('/0/private/Balance', {
         "nonce": str(int(1000*time.time()))
         }, self.api_key, self.api_sec)
@@ -35,6 +41,9 @@ class KrakenBot:
                 logging.warning("This token does not exists!")
 
     def buy_pair(self, pair, ordertype, volume, price=None):
+        '''
+        Buy given asset with specifed currency. 
+        '''
         if volume < self.order_min(pair):
             logging.warning("Volume is too low!")
             return 1
@@ -86,18 +95,29 @@ class KrakenBot:
 
         return price
 
-    def stake(self, asset, amount=None):
-        asset_amount = self.get_balance(asset)
-        method = self.get_staking_info(asset)['method']
+    def stake(self, crypto=None, amount=None):
+        if isinstance(crypto, list):
+            logging.info('Staking assets')
+            for asset in crypto:
+                available_amount = self.get_balance(asset)
 
-        resp = self.kraken_request('/0/private/Stake', {
-            "nonce": str(int(1000*time.time())),
-            "asset": asset,
-            "amount": asset_amount,
-            "method": method
-        }, self.api_key, self.api_sec)
+                if available_amount == 0:
+                    logging.warning(f'Low balance! Staking {asset} failed.')
+                else:
+                    self.stake(asset, available_amount)
+                    logging.info(f'Staked {available_amount} of {asset}')
+        else:
+            asset_amount = self.get_balance(crypto)
+            method = self.get_staking_info(crypto)['method']
 
-        return resp.json()
+            resp = self.kraken_request('/0/private/Stake', {
+                "nonce": str(int(1000*time.time())),
+                "asset": crypto,
+                "amount": asset_amount,
+                "method": method
+            }, self.api_key, self.api_sec)
+
+            return resp.json()
 
     def unstake(self, asset):
         
@@ -131,28 +151,41 @@ class KrakenBot:
 
         return 1
 
-    def check_contrib_values(self, pairs, mode='min_order'):
+    def check_contrib_values(self, pairs, contrib_per_period, mode='min_order'):
         contributions = {}
         for pair, percentage in pairs.items():
-            contrib = (percentage * self.contrib_per_period)/100
+            contrib = (percentage * contrib_per_period)/100
 
             minimum_order = self.order_min(pair)
             price=self.get_price(pair)
             logging.info(f'Minimum order volume: {pair}: {minimum_order}')
 
             if contrib/price < minimum_order:
-                # This is fine for min_oder mode
-                contributions[pair] = round(minimum_order, self.dec_places(pair))
-
-                #TODO
-                # Proportion mode should be run recursively
-                # e.g
-                # update contrib_per_period accordingly
-                # return self.check_contrib_values(pairs)
+                if mode=='min_order':
+                    contributions[pair] = round(minimum_order, self.dec_places(pair))
+                    logging.info(f'Updated {pair} contribution to {contributions[pair]}')
+                elif mode == 'keep_proportion':
+                    contrib_per_period = (100*minimum_order*price)/percentage
+                    logging.info(f'Updated contribution to: {contrib_per_period}')
+                    return self.check_contrib_values(pairs)
+                elif mode == 'skip':
+                    del percentage
+                    logging.info(f'Deleted pair {pair}')
             else:
                 contributions[pair] = round(contrib/price, self.dec_places(pair))
 
         return contributions
+
+    def make_contribution(self, pairs, contrib_per_period):
+        contributions = self.check_contrib_values(pairs, contrib_per_period)
+
+        logging.info('Buying assets')
+        for pair, value in contributions.items():
+            if self.get_balance('ZUSD') < value:
+                logging.warning(f'Low balance! Bying {pair} "failed.')
+            else:
+                # kraken_bot.buy_pair(pair, 'market', contributions[pair])
+                logging.info(f'Bought pair: {pair} {value}->{round(value*self.get_price(pair),2)}')
 
 
     def get_kraken_signature(self, urlpath, data, secret):
