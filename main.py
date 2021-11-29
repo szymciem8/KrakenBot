@@ -38,7 +38,7 @@ if check_sum != 100:
 
 start, existed = kraken_bot.get_start_time()
 if not existed:
-    kraken_bot.buy_pair(pairs, contrib_per_period)
+    kraken_bot.make_contribution(pairs, contrib_per_period)
     time.sleep(MINUTE)
     kraken_bot.stake(staked_assets)
 

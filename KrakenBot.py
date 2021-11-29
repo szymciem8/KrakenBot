@@ -25,7 +25,7 @@ class KrakenBot:
 
     def __init__(self, api_url, api_key, api_sec):
         self.BASE_CURRENCY='ZUSD'
-   
+
         self.api_url=api_url
         self.api_key=api_key
         self.api_sec=api_sec
@@ -60,22 +60,47 @@ class KrakenBot:
         '''
         resp = self.kraken_request('/0/private/Balance', {
         "nonce": str(int(1000*time.time()))
-        }, self.api_key, self.api_sec)
+        }, self.api_key, self.api_sec).json()
 
+        balance = {}
         if token==None:
-            return resp.json()['result']
+            # Return all
+            return resp['result']
+        elif token=='staked':
+            # Return staked
+            for asset, volume in resp['result'].items():
+                if '.S' in asset:
+                    balance[asset] = volume
+            return balance
+        elif token=='unstaked':
+            # Return unstaked
+            for asset, volume in resp['result'].items():
+                if '.S' not in asset:
+                    balance[asset] = volume
+            return balance
         else:
             try:
-                return float(resp.json()['result'][token])
+                # Return one token
+                return float(resp['result'][token])
             except:
                 logging.warning("This token does not exists!")
+                return 1
+
+    def asset_list(self, type='all'):
+
+        if type=='all':
+            return list(self.get_balance().keys())
+        elif type=='staked':
+            return list(self.get_balance('staked').keys())
+        elif type=='unstaked':
+            return list(self.get_balance('unstaked').keys())
 
     def get_price(self, pair, type='ask'):
         '''
         Get price of specified asset.
         '''
-        resp = requests.get(self.api_url+'/0/public/Ticker?pair='+pair)
-        price = float(resp.json()['result'][pair][type[0]][0])
+        resp = requests.get(self.api_url+'/0/public/Ticker?pair='+pair).json()
+        price = float(resp['result'][pair][type[0]][0])
 
         return price
 
@@ -83,15 +108,15 @@ class KrakenBot:
         '''
         Returns the minimum order value of give asset.
         '''
-        resp = requests.get(self.api_url+'/0/public/AssetPairs?pair='+pair)
-        return float(resp.json()['result'][pair]['ordermin'])
+        resp = requests.get(self.api_url+'/0/public/AssetPairs?pair='+pair).json()
+        return float(resp['result'][pair]['ordermin'])
 
     def dec_places(self, pair):
         '''
         Returns maximum number of decimal places of given asset.
         '''
-        resp = requests.get(self.api_url+'/0/public/AssetPairs?pair='+pair)
-        return int(resp.json()['result'][pair]['lot_decimals'])
+        resp = requests.get(self.api_url+'/0/public/AssetPairs?pair='+pair).json()
+        return int(resp['result'][pair]['lot_decimals'])
 
     def buy_pair(self, pair, ordertype, volume, price=None):
         '''
@@ -108,12 +133,15 @@ class KrakenBot:
                     "type": "buy",
                     "volume": volume,
                     "pair": pair
-                }, self.api_key, self.api_sec)
+                }, self.api_key, self.api_sec).json()
 
-                if not resp.json()['error']:
+                if not resp['error']:
                     self.money_invested += volume * self.get_price(pair)
+                    logging.info(resp['error'])
+                else:
+                    logging.info(resp['result'])
             
-                return resp.json()
+                return resp
         return 1
 
     def sell_pair(self, pair, ordertype, volume):
@@ -131,9 +159,9 @@ class KrakenBot:
                     "type": "sell",
                     "volume": volume,
                     "pair": pair
-                }, self.api_key, self.api_sec)
+                }, self.api_key, self.api_sec).json()
             
-                return resp.json()
+                return resp
         return 1
 
     def stake(self, crypto=None, amount=None):
@@ -150,8 +178,10 @@ class KrakenBot:
                 else:
                     self.stake(asset, available_amount)
                     logging.info(f'Staked {available_amount} of {asset}')
-        else:
+        elif isinstance(crypto, str):
             asset_amount = self.get_balance(crypto)
+
+            print(crypto)
             method = self.get_staking_info(crypto)['method']
 
             resp = self.kraken_request('/0/private/Stake', {
@@ -159,9 +189,9 @@ class KrakenBot:
                 "asset": crypto,
                 "amount": asset_amount,
                 "method": method
-            }, self.api_key, self.api_sec)
+            }, self.api_key, self.api_sec).json()
 
-            return resp.json()
+            return resp
 
     def unstake(self, asset):
         '''
@@ -177,9 +207,9 @@ class KrakenBot:
             "asset": asset,
             "amount": asset_amount,
             "method": method
-        }, self.api_key, self.api_sec)
+        }, self.api_key, self.api_sec).json()
 
-        return resp.json()
+        return resp
 
     def get_staking_info(self, asset):
         '''
@@ -187,14 +217,12 @@ class KrakenBot:
         '''
         resp = self.kraken_request('/0/private/Staking/Assets', {
         "nonce": str(int(1000*time.time()))
-        }, self.api_key, self.api_sec)
-
-        resp = resp.json()['result']
+        }, self.api_key, self.api_sec).json()
 
         for i in range(len(resp)):
-            if resp[i]['asset'] == asset:
-                return resp[i]
-
+            print(resp['result'][i])
+            if resp['result'][i]['asset'] == asset:
+                return resp['result'][i]
         return 1
 
     def check_contrib_values(self, pairs, contrib_per_period, mode='min_order'):
@@ -257,22 +285,49 @@ class KrakenBot:
             if self.get_balance('ZUSD') < value:
                 logging.warning(f'Low balance! Bying {pair} "failed.')
             else:
-                # kraken_bot.buy_pair(pair, 'market', contributions[pair])
+                self.buy_pair(pair, 'market', contributions[pair])
                 with open(MONEY_INVESTED_PATH, 'wb') as file:
                     pickle.dump(self.money_invested, file)
 
                 logging.info(f'Bought pair: {pair} {value}->{round(value*self.get_price(pair),2)}')
     
-    def get_profit(type='overall'):
-        # profit = value_of_assets/value_of_money_invested
-        # What if something is sold?
-        pass
+    def get_profit(self, type='overall'):
+        '''
+        Calculates overall profit or just for given asset. 
+        '''
+        if type == 'overall':
+            investment_value = 0
+            balance = self.get_balance()
 
-    def get_staked_assets_balance(self):
-        pass
+            for asset, volume in balance.items():
+                investment_value += volume * self.get_price(asset)
 
-    def expected_staking_profit(self, timeframe='month'):
-        pass
+            profit = investment_value/self.money_invested
+            return profit
+
+    def expected_staking_income(self, timeframe='month'):
+        staked_assets = self.get_balance('staked')
+        expected_income = 0
+
+        for asset, volume in staked_assets.items():
+            percentage_yield = self.get_staking_info(asset[:-2])['rewards']['reward']
+            expected_income += volume * self.get_price(asset) * percentage_yield/100
+
+        return expected_income
 
     def dollar_cost_average(self):
+        pass
+
+    def sell_all_assets(self):
+        # 1. All at once
+        # 2. Gradually
+        pass 
+
+    def unstake_all(self):
+        pass
+
+    def trading_strategy(self):
+        pass
+
+    def ai_trading(self):
         pass
