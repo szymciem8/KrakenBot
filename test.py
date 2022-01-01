@@ -24,14 +24,19 @@ contrib_per_period = 40
 # Paris with proportions. Proprtions are in %
 pairs = {'XETHZUSD':24, 
          'ADAUSD':22, 
-         'SOLZUSD':22, 
+         'SOLUSD':22, 
          'DOTUSD':22, 
          'ALGOUSD':5, 
          'KSMUSD':5}
 
 staked_assets = ['ADA', 'SOL', 'DOT', 'KSM', 'ALGO']
 
-kraken_bot.make_contribution(pairs, contrib_per_period)
+#kraken_bot.make_contribution(pairs, contrib_per_period)
+
+# kraken_bot.buy_pair('SOLUSD', 'market', 0.02)
+
+# TODO
+print(kraken_bot.get_price('SOLUSD'))
 
 # kraken_bot.make_contribution(pairs, contrib_per_period)
 # kraken_bot.stake(staked_assets)
