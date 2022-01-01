@@ -8,7 +8,7 @@ from requests.models import parse_header_links
 import logging
 import os
 import pickle
-import datetime
+from datetime import datetime
 
 # Time constants
 MINUTE=60
@@ -16,10 +16,10 @@ HOUR=MINUTE*60
 DAY=HOUR*24
 
 MONEY_INVESTED_PATH = path = os.path.join(os.path.dirname(__file__), 'data/money_invested.pickle')
-START_TIME_PATH = os.path.join(os.path.dirname(__file__), 'logs/kraken_bot_log.log')
+LOGS_PATH = os.path.join(os.path.dirname(__file__), 'logs/kraken_bot_log.log')
 
 format  = '%(asctime)s-%(process)d-%(levelname)s-%(message)s'
-logging.basicConfig(filename=START_TIME_PATH, filemode='a', format=format, level=logging.INFO)
+logging.basicConfig(filename=LOGS_PATH, filemode='a', format=format, level=logging.INFO)
 
 class KrakenBot:
 
@@ -31,10 +31,12 @@ class KrakenBot:
         self.api_sec=api_sec
 
         if os.path.exists(MONEY_INVESTED_PATH):
-            with open(MONEY_INVESTED_PATH, 'wb') as file:
+            with open(MONEY_INVESTED_PATH, 'rb') as file:
                 self.money_invested = pickle.load(file)
+                print('file')
         else:
             self.money_invested=0
+            print('no file')
 
     def get_kraken_signature(self, urlpath, data, secret):
         postdata = urllib.parse.urlencode(data)
@@ -259,8 +261,8 @@ class KrakenBot:
         Read start time of the bot from pickle file, if it does not exist, create one. 
         '''
         path = os.path.join(os.path.dirname(__file__), 'start.pickle')
-        if os.path.exists(START_TIME_PATH):
-            with open(START_TIME_PATH, 'rb') as file:
+        if os.path.exists(path):
+            with open(path, 'rb') as file:
                 start = pickle.load(file)
             logging.info('Reading last cotribution date...')
             existed=True
@@ -269,7 +271,7 @@ class KrakenBot:
             logging.info('Creating new one.')
             # Save with pickle
             start = datetime.now()
-            with open(START_TIME_PATH, 'wb') as file:
+            with open(path, 'wb') as file:
                 pickle.dump(start, file)
             existed=False
 
@@ -285,7 +287,7 @@ class KrakenBot:
             if self.get_balance('ZUSD') < value:
                 logging.warning(f'Low balance! Bying {pair} "failed.')
             else:
-                self.buy_pair(pair, 'market', contributions[pair])
+                #self.buy_pair(pair, 'market', contributions[pair])
                 with open(MONEY_INVESTED_PATH, 'wb') as file:
                     pickle.dump(self.money_invested, file)
 

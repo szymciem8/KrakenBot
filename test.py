@@ -22,13 +22,20 @@ kraken_bot = KrakenBot(api_url, api_key, api_sec)
 contrib_per_period = 40
 
 # Paris with proportions. Proprtions are in %
-pairs = {'XETHZUSD':36, 'ADAUSD':22,  'DOTUSD':22, 'ALGOUSD':10, 'KSMUSD':10}
-staked_assets = ['ADA', 'DOT', 'KSM', 'ALGO']
+pairs = {'XETHZUSD':24, 
+         'ADAUSD':22, 
+         'SOLZUSD':22, 
+         'DOTUSD':22, 
+         'ALGOUSD':5, 
+         'KSMUSD':5}
 
+staked_assets = ['ADA', 'SOL', 'DOT', 'KSM', 'ALGO']
+
+kraken_bot.make_contribution(pairs, contrib_per_period)
 
 # kraken_bot.make_contribution(pairs, contrib_per_period)
 # kraken_bot.stake(staked_assets)
 
-print(kraken_bot.get_staking_info('dfgd'))
-print(kraken_bot.get_balance('unstaked'))
+# print(kraken_bot.get_staking_info('dfgd'))
+# print(kraken_bot.get_balance('unstaked'))
 # print(kraken_bot.get_balance('staked'))

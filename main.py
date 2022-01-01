@@ -24,11 +24,17 @@ api_sec = os.environ['KRAKEN_SEC']
 kraken_bot = KrakenBot(api_url, api_key, api_sec)
 
 # Value of contribution each period
-contrib_per_period = 40
+contrib_per_period = 60
 
 # Paris with proportions. Proprtions are in %
-pairs = {'XETHZUSD':36, 'ADAUSD':22,  'DOTUSD':22, 'ALGOUSD':10, 'KSMUSD':10}
-staked_assets = ['ADA', 'DOT', 'KSM', 'ALGO']
+pairs = {'XETHZUSD':24, 
+         'ADAUSD':22, 
+         'SOLUSD':22, 
+         'DOTUSD':22, 
+         'ALGOUSD':5, 
+         'KSMUSD':5}
+
+staked_assets = ['ADA', 'SOL', 'DOT', 'KSM', 'ALGO']
 
 check_sum = 0
 for key, val in pairs.items(): check_sum += val
@@ -36,8 +42,8 @@ if check_sum != 100:
     logging.info('Assets proportions are not correct!')
     sys.exit(0)
 
-start, existed = kraken_bot.get_start_time()
-if not existed:
+start, exists = kraken_bot.get_start_time()
+if not exists:
     kraken_bot.make_contribution(pairs, contrib_per_period)
     time.sleep(MINUTE)
     kraken_bot.stake(staked_assets)
