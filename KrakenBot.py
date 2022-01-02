@@ -293,7 +293,7 @@ class KrakenBot:
         with open(MONEY_INVESTED_PATH, 'wb') as file:
             pickle.dump(self.money_invested, file)
 
-    def get_profit(self, type='overall'):
+    def get_profit(self, pairs, type='overall'):
         '''
         Calculates overall profit or just for given asset. 
         '''
@@ -301,13 +301,16 @@ class KrakenBot:
             investment_value = 0
             balance = self.get_balance()
 
-            for asset, volume in balance.items():
-                print(asset)
-                price = self.get_price(asset)
+            for pair, percent in pairs.items():
+                price = self.get_price(pair)
 
                 if price is not None:
-                    pair = self.get_pair_info(asset, 'USD')
-                    investment_value += volume * self.get_price(pair)
+                    # pair = self.get_pair_info(asset, 'USD')
+                    if 'ZUSD' in pair:
+                        volume = balance[pair[:-4]]
+                    elif 'USD':
+                        volume = balance[pair[:-3]]
+                    investment_value += float(volume) * self.get_price(pair)
 
             profit = investment_value/self.money_invested
             return profit

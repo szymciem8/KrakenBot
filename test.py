@@ -23,7 +23,7 @@ contrib_per_period = 40
 
 # Paris with proportions. Proprtions are in %
 pairs = {'XETHZUSD':24, 
-         'ADAUSD':22, 
+         'ADAUSD':22,
          'SOLUSD':22, 
          'DOTUSD':22, 
          'ALGOUSD':5, 
@@ -38,9 +38,9 @@ staked_assets = ['ADA', 'SOL', 'DOT', 'KSM', 'ALGO']
 # TODO
 # print(kraken_bot.get_price('SOLUSD'))
 # print(kraken_bot.get_profit())
-# print(kraken_bot.get_profit())
-# print(kraken_bot.get_balance())
-print(kraken_bot.get_pair_info('ETH', 'USD', 'pair_name'))
+print(kraken_bot.get_profit(pairs))
+
+# print(kraken_bot.get_pair_info('ETH', 'USD', 'pair_name'))
 
 # kraken_bot.make_contribution(pairs, contrib_per_period)
 # kraken_bot.stake(staked_assets)
