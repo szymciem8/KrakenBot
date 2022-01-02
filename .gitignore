@@ -10,6 +10,7 @@ __pycache__/
 *.sh
 
 *.pickle
+*.log
 
 # Distribution / packaging
 .Python
