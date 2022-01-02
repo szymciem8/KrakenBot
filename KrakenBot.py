@@ -288,11 +288,11 @@ class KrakenBot:
                 logging.warning(f'Low balance! Bying {pair} "failed.')
             else:
                 #self.buy_pair(pair, 'market', contributions[pair])
-                with open(MONEY_INVESTED_PATH, 'wb') as file:
-                    pickle.dump(self.money_invested, file)
-
                 logging.info(f'Bought pair: {pair} {value}->{round(value*self.get_price(pair),2)}')
     
+        with open(MONEY_INVESTED_PATH, 'wb') as file:
+            pickle.dump(self.money_invested, file)
+
     def get_profit(self, type='overall'):
         '''
         Calculates overall profit or just for given asset. 
@@ -302,7 +302,12 @@ class KrakenBot:
             balance = self.get_balance()
 
             for asset, volume in balance.items():
-                investment_value += volume * self.get_price(asset)
+                print(asset)
+                price = self.get_price(asset)
+
+                if price is not None:
+                    pair = self.get_pair_info(asset, 'USD')
+                    investment_value += volume * self.get_price(pair)
 
             profit = investment_value/self.money_invested
             return profit
@@ -316,6 +321,19 @@ class KrakenBot:
             expected_income += volume * self.get_price(asset) * percentage_yield/100
 
         return expected_income
+
+
+    def get_pair_info(self, asset, base, info_type='pair_name'):
+        altname = asset + base
+
+        resp = requests.get('https://api.kraken.com/0/public/AssetPairs').json()
+
+        for key, dict in resp['result'].items():
+            if dict['altname'] == altname:
+                if info_type == 'pair_name':
+                    return dict['base']+dict['quote']
+                else:
+                    return dict[info_type]
 
     def dollar_cost_average(self):
         pass

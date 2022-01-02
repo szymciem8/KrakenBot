@@ -36,7 +36,11 @@ staked_assets = ['ADA', 'SOL', 'DOT', 'KSM', 'ALGO']
 # kraken_bot.buy_pair('SOLUSD', 'market', 0.02)
 
 # TODO
-print(kraken_bot.get_price('SOLUSD'))
+# print(kraken_bot.get_price('SOLUSD'))
+# print(kraken_bot.get_profit())
+# print(kraken_bot.get_profit())
+# print(kraken_bot.get_balance())
+print(kraken_bot.get_pair_info('ETH', 'USD', 'pair_name'))
 
 # kraken_bot.make_contribution(pairs, contrib_per_period)
 # kraken_bot.stake(staked_assets)
