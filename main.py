@@ -6,7 +6,7 @@ from datetime import datetime
 import pickle
 import logging
 
-FREQUENCY_D=30              #DAYS
+FREQUENCY_D=40              #DAYS
 FREQUENCY_H=FREQUENCY_D*24  #HOURS
 FREQUENCY_M=FREQUENCY_H*60  #MINUTES
 FREQUENCY_S=FREQUENCY_H*60  #SECONDS
@@ -27,12 +27,12 @@ kraken_bot = KrakenBot(api_url, api_key, api_sec)
 contrib_per_period = 60
 
 # Paris with proportions. Proprtions are in %
-pairs = {'XETHZUSD':24, 
-         'ADAUSD':22, 
-         'SOLUSD':22, 
-         'DOTUSD':22, 
-         'ALGOUSD':5, 
-         'KSMUSD':5}
+pairs = {'XETHZUSD':23, 
+         'ADAUSD':21, 
+         'SOLUSD':21, 
+         'DOTUSD':21, 
+         'ALGOUSD':7, 
+         'KSMUSD':7}
 
 staked_assets = ['ADA', 'SOL', 'DOT', 'KSM', 'ALGO']
 
@@ -41,6 +41,12 @@ for key, val in pairs.items(): check_sum += val
 if check_sum != 100:
     logging.info('Assets proportions are not correct!')
     sys.exit(0)
+
+print(kraken_bot.check_contrib_values(pairs, contrib_per_period, 'keep_proportion'))
+resp = input('Press Enter to continue or Q to exit: ')
+
+if resp.lower() == 'q':
+    sys.exit()
 
 start, exists = kraken_bot.get_start_time()
 if not exists:

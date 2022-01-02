@@ -232,6 +232,7 @@ class KrakenBot:
         Check if contribution values of each asset or higher than minimum 
         order value. If not, change them accordigly to specified mode. 
         '''
+        actual_contrib = 0
         contributions = {}
         for pair, percentage in pairs.items():
             contrib = (percentage * contrib_per_period)/100
@@ -247,14 +248,16 @@ class KrakenBot:
                 elif mode == 'keep_proportion':
                     contrib_per_period = (100*minimum_order*price)/percentage
                     logging.info(f'Updated contribution to: {contrib_per_period}')
-                    return self.check_contrib_values(pairs)
+                    return self.check_contrib_values(pairs, contrib_per_period)
                 elif mode == 'skip':
                     del percentage
                     logging.info(f'Deleted pair {pair}')
             else:
                 contributions[pair] = round(contrib/price, self.dec_places(pair))
 
-        return contributions
+            actual_contrib += contributions[pair] * self.get_price(pair)
+        actual_contrib = round(actual_contrib, 2)
+        return contributions, actual_contrib
 
     def get_start_time(self):
         '''
@@ -281,7 +284,7 @@ class KrakenBot:
         '''
         Make regular contribution of asset. 
         '''
-        contributions = self.check_contrib_values(pairs, contrib_per_period)
+        contributions, = self.check_contrib_values(pairs, contrib_per_period)
         logging.info('Buying assets')
         for pair, value in contributions.items():
             if self.get_balance('ZUSD') < value:
