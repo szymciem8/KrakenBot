@@ -33,10 +33,8 @@ class KrakenBot:
         if os.path.exists(MONEY_INVESTED_PATH):
             with open(MONEY_INVESTED_PATH, 'rb') as file:
                 self.money_invested = pickle.load(file)
-                print('file')
         else:
             self.money_invested=0
-            print('no file')
 
     def get_kraken_signature(self, urlpath, data, secret):
         postdata = urllib.parse.urlencode(data)
@@ -139,9 +137,9 @@ class KrakenBot:
 
                 if not resp['error']:
                     self.money_invested += volume * self.get_price(pair)
-                    logging.info(resp['error'])
-                else:
                     logging.info(resp['result'])
+                else:
+                    logging.info(resp['error'])
             
                 return resp
         return 1
@@ -183,7 +181,6 @@ class KrakenBot:
         elif isinstance(crypto, str):
             asset_amount = self.get_balance(crypto)
 
-            print(crypto)
             method = self.get_staking_info(crypto)['method']
 
             resp = self.kraken_request('/0/private/Stake', {
@@ -221,8 +218,10 @@ class KrakenBot:
         "nonce": str(int(1000*time.time()))
         }, self.api_key, self.api_sec).json()
 
-        for i in range(len(resp)):
-            print(resp['result'][i])
+        # print(resp)
+
+        for i in range(len(resp['result'])):
+            # print(resp['resp'])
             if resp['result'][i]['asset'] == asset:
                 return resp['result'][i]
         return 1
@@ -284,13 +283,13 @@ class KrakenBot:
         '''
         Make regular contribution of asset. 
         '''
-        contributions, = self.check_contrib_values(pairs, contrib_per_period)
+        contributions, _ = self.check_contrib_values(pairs, contrib_per_period)
         logging.info('Buying assets')
         for pair, value in contributions.items():
             if self.get_balance('ZUSD') < value:
                 logging.warning(f'Low balance! Bying {pair} "failed.')
             else:
-                #self.buy_pair(pair, 'market', contributions[pair])
+                self.buy_pair(pair, 'market', contributions[pair])
                 logging.info(f'Bought pair: {pair} {value}->{round(value*self.get_price(pair),2)}')
     
         with open(MONEY_INVESTED_PATH, 'wb') as file:

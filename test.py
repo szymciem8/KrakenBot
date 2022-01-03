@@ -35,17 +35,9 @@ staked_assets = ['ADA', 'SOL', 'DOT', 'KSM', 'ALGO']
 
 # kraken_bot.buy_pair('SOLUSD', 'market', 0.02)
 
-q = input()
-print(q)
-
-if q.lower() == 'q':
-    print('End')
-    sys.exit()
-
-# TODO
 # print(kraken_bot.get_price('SOLUSD'))
 # print(kraken_bot.get_profit())
-print(kraken_bot.get_profit(pairs))
+print(kraken_bot.get_staking_info('ADA')['method'])
 
 # print(kraken_bot.get_pair_info('ETH', 'USD', 'pair_name'))
 
